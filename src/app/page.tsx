@@ -1,103 +1,192 @@
-import Image from "next/image";
+// src/app/page.tsx
+"use client";
 
-export default function Home() {
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
+import { Brain, Loader2, TrendingUp, Trophy, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+export default function HomePage() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(false); // Changed to false initially
+  const router = useRouter();
+  const supabase = createClient();
+
+  const checkUser = async () => {
+    setLoading(true);
+    try {
+      // Check if user is authenticated
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        // User not authenticated, redirect to login
+        router.push("/login");
+        return;
+      }
+
+      // Get user data from our database
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', authUser.email)
+        .single();
+
+      if (error || !userData) {
+        console.error("Error fetching user data:", error);
+        router.push("/login");
+        return;
+      }
+
+      setUser(userData);
+
+      // Check if user has selected a league
+      const { data: userLeagues } = await supabase
+        .from('user_leagues')
+        .select('*')
+        .eq('user_id', userData.id)
+        .eq('is_active', true);
+
+      if (!userLeagues || userLeagues.length === 0) {
+        // No active leagues, redirect to league selection
+        router.push("/select-league");
+        return;
+      }
+
+      // User has leagues, redirect to dashboard
+      router.push("/dashboard");
+
+    } catch (error) {
+      console.error("Authentication check failed:", error);
+      router.push("/login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGetStarted = () => {
+    checkUser();
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-8">
+        {/* Hero Section */}
+        <div className="text-center space-y-6 mb-12">
+          <h1 className="text-5xl font-bold text-gray-900">
+            Fantasy Football <span className="text-blue-600">AI</span>
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Your intelligent fantasy football assistant. Get AI-powered trade analysis,
+            waiver wire recommendations, and lineup optimization.
+          </p>
+          <Button 
+            onClick={handleGetStarted}
+            size="lg"
+            className="bg-blue-600 hover:bg-blue-700"
+            disabled={loading}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Loading...
+              </>
+            ) : (
+              "Get Started"
+            )}
+          </Button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Features Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <Card className="text-center">
+            <CardHeader>
+              <TrendingUp className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <CardTitle>Trade Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                AI-powered trade evaluation using real-time player values and projections
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center">
+            <CardHeader>
+              <Users className="h-12 w-12 text-green-600 mx-auto mb-4" />
+              <CardTitle>Waiver Wire</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Smart pickup recommendations based on your team needs and player availability
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center">
+            <CardHeader>
+              <Trophy className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
+              <CardTitle>Lineup Optimization</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Weekly start/sit recommendations to maximize your scoring potential
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center">
+            <CardHeader>
+              <Brain className="h-12 w-12 text-purple-600 mx-auto mb-4" />
+              <CardTitle>Draft Assistant</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Real-time draft guidance and strategy recommendations for future drafts
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* How It Works */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">How It Works</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-6 text-center">
+              <div className="space-y-2">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                  <span className="text-blue-600 font-bold">1</span>
+                </div>
+                <h3 className="font-semibold">Connect Your League</h3>
+                <p className="text-gray-600 text-sm">
+                  Link your Sleeper account to import your team and league data
+                </p>
+              </div>
+              <div className="space-y-2">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                  <span className="text-green-600 font-bold">2</span>
+                </div>
+                <h3 className="font-semibold">Ask Your AI Assistant</h3>
+                <p className="text-gray-600 text-sm">
+                  Get personalized advice on trades, pickups, and lineup decisions
+                </p>
+              </div>
+              <div className="space-y-2">
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
+                  <span className="text-purple-600 font-bold">3</span>
+                </div>
+                <h3 className="font-semibont">Dominate Your League</h3>
+                <p className="text-gray-600 text-sm">
+                  Make smarter decisions and climb the leaderboard
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
